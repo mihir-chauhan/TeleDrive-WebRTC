@@ -24,7 +24,7 @@ function start() {
   localDisplayName = urlParams.get('displayName') || prompt('Enter your name', '');
   if (confirm('If you are the host and will be connecting to the robot, please click OK. Otherwise, click CANCEL.')) {
     prompt('Please enter your robot IP address as shown on the Driver Station', '')
-    console.log('Thing was saved to the database.');
+    console.log('Need to use ip for robot connection.');
   } else {
     localDisplayName = "Driver: ".concat(localDisplayName);
     console.log(localDisplayName);
