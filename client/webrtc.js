@@ -13,6 +13,8 @@ var peerConnectionConfig = {
   ]
 };
 
+var isDriver = false;
+
 function start() {
   localUuid = createUUID();
   console.log();
@@ -20,17 +22,39 @@ function start() {
   // check if "&displayName=xxx" is appended to URL, otherwise alert user to populate
   var urlParams = new URLSearchParams(window.location.search);
   localDisplayName = urlParams.get('displayName') || prompt('Enter your name', '');
-  document.getElementById('localVideoContainer').appendChild(makeLabel(localDisplayName));
+  if (confirm('If you are the host and will be connecting to the robot, please click OK. Otherwise, click CANCEL.')) {
+    prompt('Please enter your robot IP address as shown on the Driver Station', '')
+    console.log('Thing was saved to the database.');
+  } else {
+    localDisplayName = "Driver: ".concat(localDisplayName);
+    console.log(localDisplayName);
+    isDriver = true;
+    document.getElementById('localVideoContainer').style.display = "none";
+  }
+
 
   // specify no audio for user media
   var constraints = {
     video: {
       width: { max: 1920 },
       height: { max: 1080 },
-      frameRate: { max: 30 },
+      frameRate: { max: 60 },
     },
     audio: true,
   };
+
+  // if (isDriver) {
+  //   constraints = {
+  //     video: {
+  //       width: { max: 1 },
+  //       height: { max: 1 },
+  //       frameRate: { max: 30 },
+  //     },
+  //     audio: true,
+  //   };
+  // }
+
+  console.log(constraints);
 
   // set up local video stream
   if (navigator.mediaDevices.getUserMedia) {
@@ -38,7 +62,9 @@ function start() {
     navigator.mediaDevices.getUserMedia(constraints)
       .then(stream => {
         localStream = stream;
-        document.getElementById('localVideo').srcObject = stream;
+        if (!isDriver) {
+          document.getElementById('localVideo').srcObject = stream;
+        }
       }).catch(errorHandler)
 
       // set up websocket and message all existing clients
@@ -113,6 +139,10 @@ var previousPeerUUIDs = [];
 
 function gotRemoteStream(event, peerUuid) {
 
+  if (!isDriver) {
+    return;
+  }
+
   console.log(`got remote stream, peer ${peerUuid}`);
   for (i = 0; i < previousPeerUUIDs.length; i++) {
     if (previousPeerUUIDs[i] == peerUuid) {
@@ -161,7 +191,9 @@ function updateLayout() {
   var rowHeight = '98vh';
   var colWidth = '98vw';
 
-  var numVideos = Object.keys(peerConnections).length + 1; // add one to include local video
+  var numVideos = Object.keys(peerConnections).length; // add one to include local video
+
+  console.log(numVideos);
 
   if (numVideos > 1 && numVideos <= 4) { // 2x2 grid
     rowHeight = '48vh';
