@@ -1,3 +1,5 @@
+var dgram = require("dgram");
+
 const WS_PORT = 11039; //make sure this matches the port for the webscokets server
 
 var localUuid;
@@ -73,12 +75,27 @@ function start() {
             console.log("ip:  " + robotIPaddress);
             serverConnection.send("IP: " + robotIPaddress);
           }
+          if (isDriver) {
+            startGamepadHandlerAndSocketThread();
+          }
         }
       }).catch(errorHandler);
 
   } else {
     alert('Your browser does not support getUserMedia API');
   }
+}
+
+function startGamepadHandlerAndSocketThread() {
+  var PORT = 7000;
+  var HOST = window.location.hostname;
+  var message = new Buffer('Test Message');
+  var client = dgram.createSocket('udp4');
+  client.send(message, 0, message.length, PORT, HOST, function (err, bytes) {
+    if (err) throw err;
+    console.log('Sent message to ' + HOST + ':' + PORT);
+    client.close();
+  });
 }
 
 function gotMessageFromServer(message) {
