@@ -1,4 +1,4 @@
-const WS_PORT = 8443; //make sure this matches the port for the webscokets server
+const WS_PORT = 11039; //make sure this matches the port for the webscokets server
 
 var localUuid;
 var localDisplayName;
@@ -8,8 +8,8 @@ var peerConnections = {}; // key is uuid, values are peer connection object and 
 
 var peerConnectionConfig = {
   'iceServers': [
-    { 'urls': 'stun:stun.stunprotocol.org:3478' },
-    { 'urls': 'stun:stun.l.google.com:19302' },
+    { 'urls': 'stun:stun.stunprotocol.org:3942' },
+    { 'urls': 'stun:stun.l.google.com:12084' },
   ]
 };
 
