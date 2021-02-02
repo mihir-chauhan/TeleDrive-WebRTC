@@ -43,16 +43,12 @@ function start() {
     audio: true,
   };
 
-  // if (isDriver) {
-  //   constraints = {
-  //     video: {
-  //       width: { max: 1 },
-  //       height: { max: 1 },
-  //       frameRate: { max: 30 },
-  //     },
-  //     audio: true,
-  //   };
-  // }
+  if (isDriver) {
+    constraints = {
+      video: false,
+      audio: true,
+    };
+  }
 
   console.log(constraints);
 
@@ -118,7 +114,7 @@ function setUpPeer(peerUuid, displayName, initCall = false) {
   peerConnections[peerUuid].pc.addStream(localStream);
 
   if (initCall) {
-    peerConnections[peerUuid].pc.createOffer().then(description => createdDescription(description, peerUuid)).catch(errorHandler);
+    peerConnections[peerUuid].pc.createOffer({ offerToReceiveVideo: true }).then(description => createdDescription(description, peerUuid)).catch(errorHandler);
   }
 }
 
@@ -138,11 +134,6 @@ function createdDescription(description, peerUuid) {
 var previousPeerUUIDs = [];
 
 function gotRemoteStream(event, peerUuid) {
-
-  if (!isDriver) {
-    return;
-  }
-
   console.log(`got remote stream, peer ${peerUuid}`);
   for (i = 0; i < previousPeerUUIDs.length; i++) {
     if (previousPeerUUIDs[i] == peerUuid) {
