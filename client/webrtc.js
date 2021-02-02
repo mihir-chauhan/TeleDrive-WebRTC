@@ -188,6 +188,10 @@ function updateLayout() {
 
   var numVideos = Object.keys(peerConnections).length; // add one to include local video
 
+  if (!isDriver) {
+    numVideos++;
+  }
+
   console.log(numVideos);
 
   if (numVideos > 1 && numVideos <= 4) { // 2x2 grid
