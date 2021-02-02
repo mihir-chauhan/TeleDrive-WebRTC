@@ -14,6 +14,7 @@ var peerConnectionConfig = {
 };
 
 var isDriver = false;
+var robotIPaddress;
 
 function start() {
   localUuid = createUUID();
@@ -23,8 +24,7 @@ function start() {
   var urlParams = new URLSearchParams(window.location.search);
   localDisplayName = urlParams.get('displayName') || prompt('Enter your name', '');
   if (confirm('If you are the host and will be connecting to the robot, please click OK. Otherwise, click CANCEL.')) {
-    prompt('Please enter your robot IP address as shown on the Driver Station', '')
-    console.log('Need to use ip for robot connection.');
+    robotIPaddress = prompt('Please enter your robot IP address as shown on the Driver Station', '');
   } else {
     localDisplayName = "Driver: ".concat(localDisplayName);
     console.log(localDisplayName);
@@ -69,6 +69,10 @@ function start() {
         serverConnection.onmessage = gotMessageFromServer;
         serverConnection.onopen = event => {
           serverConnection.send(JSON.stringify({ 'displayName': localDisplayName, 'uuid': localUuid, 'dest': 'all' }));
+          if (!isDriver && robotIPaddress != null) {
+            console.log("ip:  " + robotIPaddress);
+            serverConnection.send("IP: " + robotIPaddress);
+          }
         }
       }).catch(errorHandler);
 

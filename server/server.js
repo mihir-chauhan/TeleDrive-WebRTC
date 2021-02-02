@@ -19,7 +19,6 @@ const serverConfig = {
 // Create a server for the client html page
 const handleRequest = function (request, response) {
   // Render the single client html file for any request the HTTP server receives
-  console.log('request received: ' + request.url);
 
   if (request.url === '/webrtc.js') {
     response.writeHead(200, { 'Content-Type': 'application/javascript' });
@@ -44,7 +43,17 @@ const wss = new WebSocketServer({ server: httpsServer });
 wss.on('connection', function (ws) {
   ws.on('message', function (message) {
     // Broadcast any received message to all clients
-    wss.broadcast(message);
+    if (message.includes("IP: ")) {
+      message = message.replace('IP: ', '')
+      if (ValidateIPaddress(message)) {
+        console.log("Connecting to Robot at: " + message);
+        //TODO: initialize robot UDP socket connection
+      } else {
+        console.log("The IP address for the robot '" + message + "' is not a valid address. Please reload the host page and try again.");
+      }
+    } else {
+      wss.broadcast(message);
+    }
   });
 
   ws.on('error', () => ws.terminate());
@@ -59,7 +68,7 @@ wss.broadcast = function (data) {
   });
 };
 
-console.log('Server running.'
+console.log('Server running successfully.'
 );
 
 // ----------------------------------------------------------------------------------------
@@ -70,3 +79,10 @@ http.createServer(function (req, res) {
   res.writeHead(301, { "Location": "https://" + req.headers['host'] + req.url });
   res.end();
 }).listen(HTTP_PORT);
+
+function ValidateIPaddress(ipaddress) {
+  if (/^(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/.test(ipaddress)) {
+    return (true)
+  }
+  return (false)
+}  
