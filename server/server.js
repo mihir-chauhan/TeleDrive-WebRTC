@@ -28,6 +28,9 @@ const handleRequest = function (request, response) {
   } else if (request.url === '/style.css') {
     response.writeHead(200, { 'Content-Type': 'text/css' });
     response.end(fs.readFileSync('client/style.css'));
+  } else if (request.url === '/gamepadWorker.js') {
+    response.writeHead(200, { 'Content-Type': 'application/javascript' });
+    response.end(fs.readFileSync('client/gamepadWorker.js'));
   } else {
     response.writeHead(200, { 'Content-Type': 'text/html' });
     response.end(fs.readFileSync('client/index.html'));

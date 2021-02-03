@@ -96,6 +96,18 @@ function startGamepadHandlerAndSocketThread() {
     console.log('Sent message to ' + HOST + ':' + PORT);
     client.close();
   });
+
+  // if (window.Worker) {
+  //   const myWorker = new Worker("gamepadWorker.js");
+
+  //   myWorker.postMessage([1, 0]);
+
+  //   myWorker.onmessage = function (e) {
+  //     console.log('Message received from worker: ' + e.data);
+  //   }
+  // } else {
+  //   console.log('Your browser doesn\'t support web workers.')
+  // }
 }
 
 function gotMessageFromServer(message) {
