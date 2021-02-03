@@ -1,5 +1,3 @@
-var dgram = require("dgram");
-
 const WS_PORT = 11039; //make sure this matches the port for the webscokets server
 
 var localUuid;
@@ -87,27 +85,17 @@ function start() {
 }
 
 function startGamepadHandlerAndSocketThread() {
-  var PORT = 7000;
-  var HOST = window.location.hostname;
-  var message = new Buffer('Test Message');
-  var client = dgram.createSocket('udp4');
-  client.send(message, 0, message.length, PORT, HOST, function (err, bytes) {
-    if (err) throw err;
-    console.log('Sent message to ' + HOST + ':' + PORT);
-    client.close();
-  });
+  if (window.Worker) {
+    const myWorker = new Worker("gamepadWorker.js");
 
-  // if (window.Worker) {
-  //   const myWorker = new Worker("gamepadWorker.js");
+    myWorker.postMessage([1, 0]);
 
-  //   myWorker.postMessage([1, 0]);
-
-  //   myWorker.onmessage = function (e) {
-  //     console.log('Message received from worker: ' + e.data);
-  //   }
-  // } else {
-  //   console.log('Your browser doesn\'t support web workers.')
-  // }
+    myWorker.onmessage = function (e) {
+      console.log('Message received from worker: ' + e.data);
+    }
+  } else {
+    console.log('Your browser doesn\'t support web workers.')
+  }
 }
 
 function gotMessageFromServer(message) {

@@ -85,17 +85,6 @@ http.createServer(function (req, res) {
   res.end();
 }).listen(HTTP_PORT);
 
-var server = dgram.createSocket('udp4');
-var UdpPort = 7000;
-server.on('listening', function () {
-  var address = server.address();
-  console.log('UDP Server listening on ' + address.address + ":" + address.port);
-});
-server.on('message', function (message, remote) {
-  console.log("Got message: " + message);
-});
-server.bind(UdpPort);
-
 function ValidateIPaddress(ipaddress) {
   if (/^(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/.test(ipaddress)) {
     return (true)
