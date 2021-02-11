@@ -113,7 +113,7 @@ function startGamepadHandlerAndSocketThread() {
     for (j in controllers) {
       var controller = controllers[j];
 
-      for (var i = 0; i < controller.buttons.length; i++) {
+      for (var i = 0; i < controller.buttons.length; i++) { //a, b, x, y, left_bumper, right_bumper, left_trigger, right_trigger, back, start, ..., 12 - dpad_up, 13 - dpad_down, 14 - dpad_left, 15 - dpad_right
         var val = controller.buttons[i];
         var pressed = val == 1.0;
         var touched = false;
@@ -132,8 +132,8 @@ function startGamepadHandlerAndSocketThread() {
         }
       }
 
-      for (var i = 0; i < controller.axes.length; i++) {
-        // console.log("controller " + controller.axes[i]);
+      for (var i = 0; i < controller.axes.length; i++) { // leftX, leftY, rightX, rightY
+
       }
     }
     rAF(updateStatus);
