@@ -85,17 +85,11 @@ function start() {
 }
 
 function startGamepadHandlerAndSocketThread() {
-  if (window.Worker) {
-    const myWorker = new Worker("gamepadWorker.js");
-
-    myWorker.postMessage([1, 0]);
-
-    myWorker.onmessage = function (e) {
-      console.log('Message received from worker: ' + e.data);
-    }
-  } else {
-    console.log('Your browser doesn\'t support web workers.')
-  }
+  addEventListener("gamepadconnected", function (e) {
+    console.log("Gamepad connected at index %d: %s. %d buttons, %d axes.",
+      e.gamepad.index, e.gamepad.id,
+      e.gamepad.buttons.length, e.gamepad.axes.length);
+  });
 }
 
 function gotMessageFromServer(message) {
