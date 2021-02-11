@@ -85,57 +85,78 @@ function start() {
 
 function startGamepadHandlerAndSocketThread() {
 
-  var interval;
-  var a = 0;
-  var b = 0;
-  var x = 0;
-  var y = 0;
+  var haveEvents = 'GamepadEvent' in window;
+  var haveWebkitEvents = 'WebKitGamepadEvent' in window;
+  var controllers = {};
+  var rAF = window.mozRequestAnimationFrame ||
+    window.webkitRequestAnimationFrame ||
+    window.requestAnimationFrame;
 
-  if (!('ongamepadconnected' in window)) {
-    // No gamepad events available, poll instead.
-    interval = setInterval(pollGamepads, 50);
+  function connecthandler(e) {
+    addgamepad(e.gamepad);
+  }
+  function addgamepad(gamepad) {
+    controllers[gamepad.index] = gamepad;
+    rAF(updateStatus);
   }
 
-  function pollGamepads() {
-    var gamepads = navigator.getGamepads ? navigator.getGamepads() : (navigator.webkitGetGamepads ? navigator.webkitGetGamepads : []);
+  function disconnecthandler(e) {
+    removegamepad(e.gamepad);
+  }
+
+  function removegamepad(gamepad) {
+    delete controllers[gamepad.index];
+  }
+
+  function updateStatus() {
+    scangamepads();
+    for (j in controllers) {
+      var controller = controllers[j];
+
+      for (var i = 0; i < controller.buttons.length; i++) {
+        var val = controller.buttons[i];
+        var pressed = val == 1.0;
+        var touched = false;
+        if (typeof (val) == "object") {
+          pressed = val.pressed;
+          if ('touched' in val) {
+            touched = val.touched;
+          }
+          val = val.value;
+        }
+        if (pressed) {
+          console.log("SOMETHING WAS PRESSED");
+        }
+        if (touched) {
+          console.log("SOMETHING WAS TOUCHED");
+        }
+      }
+
+      for (var i = 0; i < controller.axes.length; i++) {
+        // console.log("controller " + controller.axes[i]);
+      }
+    }
+    rAF(updateStatus);
+  }
+
+  function scangamepads() {
+    var gamepads = navigator.getGamepads ? navigator.getGamepads() : (navigator.webkitGetGamepads ? navigator.webkitGetGamepads() : []);
     for (var i = 0; i < gamepads.length; i++) {
-      var gp = gamepads[i];
-      if (gp) {
-        gameLoop();
-        clearInterval(interval);
+      if (gamepads[i] && (gamepads[i].index in controllers)) {
+        controllers[gamepads[i].index] = gamepads[i];
       }
     }
   }
 
-  function buttonPressed(b) {
-    if (typeof (b) == "object") {
-      return b.pressed;
-    }
-    return b == 1.0;
+  if (haveEvents) {
+    window.addEventListener("gamepadconnected", connecthandler);
+    window.addEventListener("gamepaddisconnected", disconnecthandler);
+  } else if (haveWebkitEvents) {
+    window.addEventListener("webkitgamepadconnected", connecthandler);
+    window.addEventListener("webkitgamepaddisconnected", disconnecthandler);
+  } else {
+    setInterval(scangamepads, 500);
   }
-
-
-  function gameLoop() {
-    var gamepads = navigator.getGamepads ? navigator.getGamepads() : (navigator.webkitGetGamepads ? navigator.webkitGetGamepads : []);
-    if (!gamepads) {
-      return;
-    }
-
-    var gp = gamepads[0];
-    if (buttonPressed(gp.buttons[0])) { //a
-      console.log("00");
-    }
-    if (buttonPressed(gp.buttons[2])) { //x
-      console.log("11");
-    }
-    if (buttonPressed(gp.buttons[1])) { //b
-      console.log("22");
-    }
-    if (buttonPressed(gp.buttons[3])) {
-      console.log("33");
-    }
-  }
-
 
 
 }
@@ -222,6 +243,7 @@ function gotRemoteStream(event, peerUuid) {
       vidContainer.appendChild(vidElement);
 
       vidContainer.appendChild(makeLabel(peerConnections[peerUuid].displayName));
+      document.getElementById('videos').appendChild(vidContainer);
     }
   } else {
     var vidElement = document.createElement('video');
@@ -234,9 +256,9 @@ function gotRemoteStream(event, peerUuid) {
     vidContainer.setAttribute('class', 'videoContainer');
     vidContainer.appendChild(vidElement);
     vidContainer.appendChild(makeLabel(peerConnections[peerUuid].displayName));
+    document.getElementById('videos').appendChild(vidContainer);
   }
 
-  document.getElementById('videos').appendChild(vidContainer);
 
   updateLayout();
 }
