@@ -84,13 +84,8 @@ function start() {
 }
 
 function startGamepadHandlerAndSocketThread() {
-  window.addEventListener("gamepadconnected", connecthandler);
-  window.addEventListener("gamepaddisconnected", disconnecthandler);
 
-  if (!haveEvents) {
-    setInterval(scangamepads, 500);
-  }
-
+  var interval;
   var a = 0;
   var b = 0;
   var x = 0;
@@ -103,7 +98,6 @@ function startGamepadHandlerAndSocketThread() {
 
   function pollGamepads() {
     var gamepads = navigator.getGamepads ? navigator.getGamepads() : (navigator.webkitGetGamepads ? navigator.webkitGetGamepads : []);
-    console.log("LENGTH: " + gamepads.length);
     for (var i = 0; i < gamepads.length; i++) {
       var gp = gamepads[i];
       if (gp) {
