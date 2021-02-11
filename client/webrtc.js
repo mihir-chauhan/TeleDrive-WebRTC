@@ -17,8 +17,6 @@ var isDriver = false;
 var robotIPaddress;
 
 function start() {
-  localUuid = createUUID();
-  console.log();
 
   // check if "&displayName=xxx" is appended to URL, otherwise alert user to populate
   var urlParams = new URLSearchParams(window.location.search);
@@ -32,6 +30,7 @@ function start() {
     document.getElementById('localVideoContainer').style.display = "none";
   }
 
+  localUuid = createUUID(isDriver);
 
   // specify no audio for user media
   var constraints = {
@@ -85,11 +84,13 @@ function start() {
 }
 
 function startGamepadHandlerAndSocketThread() {
-  addEventListener("gamepadconnected", function (e) {
+  window.addEventListener("gamepadconnected", function (e) {
+    var gp = navigator.getGamepads()[e.gamepad.index];
     console.log("Gamepad connected at index %d: %s. %d buttons, %d axes.",
-      e.gamepad.index, e.gamepad.id,
-      e.gamepad.buttons.length, e.gamepad.axes.length);
+      gp.index, gp.id,
+      gp.buttons.length, gp.axes.length);
   });
+
 }
 
 function gotMessageFromServer(message) {
@@ -158,16 +159,35 @@ function gotRemoteStream(event, peerUuid) {
   previousPeerUUIDs[previousPeerUUIDs.length] = peerUuid;
 
   //assign stream to new HTML video element
-  var vidElement = document.createElement('video');
-  vidElement.setAttribute('autoplay', '');
-  vidElement.setAttribute('muted', '');
-  vidElement.srcObject = event.streams[0];
 
-  var vidContainer = document.createElement('div');
-  vidContainer.setAttribute('id', 'remoteVideo_' + peerUuid);
-  vidContainer.setAttribute('class', 'videoContainer');
-  vidContainer.appendChild(vidElement);
-  vidContainer.appendChild(makeLabel(peerConnections[peerUuid].displayName));
+
+  if (isDriver) {
+    if (peerUuid.includes("host-")) {
+      console.log("VALID HOST USER");
+      var vidElement = document.createElement('video');
+      vidElement.setAttribute('autoplay', '');
+      vidElement.setAttribute('muted', '');
+      vidElement.srcObject = event.streams[0];
+
+      var vidContainer = document.createElement('div');
+      vidContainer.setAttribute('id', 'remoteVideo_' + peerUuid);
+      vidContainer.setAttribute('class', 'videoContainer');
+      vidContainer.appendChild(vidElement);
+
+      vidContainer.appendChild(makeLabel(peerConnections[peerUuid].displayName));
+    }
+  } else {
+    var vidElement = document.createElement('video');
+    vidElement.setAttribute('autoplay', '');
+    vidElement.setAttribute('muted', '');
+    vidElement.srcObject = event.streams[0];
+
+    var vidContainer = document.createElement('div');
+    vidContainer.setAttribute('id', 'remoteVideo_' + peerUuid);
+    vidContainer.setAttribute('class', 'videoContainer');
+    vidContainer.appendChild(vidElement);
+    vidContainer.appendChild(makeLabel(peerConnections[peerUuid].displayName));
+  }
 
   document.getElementById('videos').appendChild(vidContainer);
 
@@ -201,6 +221,8 @@ function updateLayout() {
 
   if (!isDriver) {
     numVideos++;
+  } else {
+    numVideos = 1;
   }
 
   console.log(numVideos);
@@ -230,10 +252,13 @@ function errorHandler(error) {
 
 // Taken from http://stackoverflow.com/a/105074/515584
 // Strictly speaking, it's not a real UUID, but it gets the job done here
-function createUUID() {
+function createUUID(isDriver) {
   function s4() {
     return Math.floor((1 + Math.random()) * 0x10000).toString(16).substring(1);
   }
 
-  return s4() + s4() + '-' + s4() + '-' + s4() + '-' + s4() + '-' + s4() + s4() + s4();
+  if (isDriver) {
+    return s4() + s4() + '-' + s4() + '-' + s4() + '-' + s4() + '-' + s4() + s4() + s4();
+  }
+  return 'host-' + s4() + s4() + '-' + s4() + '-' + s4() + '-' + s4() + '-' + s4() + s4() + s4();
 }
