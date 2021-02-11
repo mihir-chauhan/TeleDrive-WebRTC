@@ -84,12 +84,65 @@ function start() {
 }
 
 function startGamepadHandlerAndSocketThread() {
-  window.addEventListener("gamepadconnected", function (e) {
-    var gp = navigator.getGamepads()[e.gamepad.index];
-    console.log("Gamepad connected at index %d: %s. %d buttons, %d axes.",
-      gp.index, gp.id,
-      gp.buttons.length, gp.axes.length);
-  });
+  window.addEventListener("gamepadconnected", connecthandler);
+  window.addEventListener("gamepaddisconnected", disconnecthandler);
+
+  if (!haveEvents) {
+    setInterval(scangamepads, 500);
+  }
+
+  var a = 0;
+  var b = 0;
+  var x = 0;
+  var y = 0;
+
+  if (!('ongamepadconnected' in window)) {
+    // No gamepad events available, poll instead.
+    interval = setInterval(pollGamepads, 50);
+  }
+
+  function pollGamepads() {
+    var gamepads = navigator.getGamepads ? navigator.getGamepads() : (navigator.webkitGetGamepads ? navigator.webkitGetGamepads : []);
+    console.log("LENGTH: " + gamepads.length);
+    for (var i = 0; i < gamepads.length; i++) {
+      var gp = gamepads[i];
+      if (gp) {
+        gameLoop();
+        clearInterval(interval);
+      }
+    }
+  }
+
+  function buttonPressed(b) {
+    if (typeof (b) == "object") {
+      return b.pressed;
+    }
+    return b == 1.0;
+  }
+
+
+  function gameLoop() {
+    var gamepads = navigator.getGamepads ? navigator.getGamepads() : (navigator.webkitGetGamepads ? navigator.webkitGetGamepads : []);
+    if (!gamepads) {
+      return;
+    }
+
+    var gp = gamepads[0];
+    if (buttonPressed(gp.buttons[0])) { //a
+      console.log("00");
+    }
+    if (buttonPressed(gp.buttons[2])) { //x
+      console.log("11");
+    }
+    if (buttonPressed(gp.buttons[1])) { //b
+      console.log("22");
+    }
+    if (buttonPressed(gp.buttons[3])) {
+      console.log("33");
+    }
+  }
+
+
 
 }
 
