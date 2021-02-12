@@ -1,4 +1,5 @@
 const WS_PORT = 11039; //make sure this matches the port for the webscokets server
+const WS_ADDR = '192.168.1.30'; //make sure this matches the port for the webscokets server
 
 var localUuid;
 var localDisplayName;
@@ -14,6 +15,7 @@ var peerConnectionConfig = {
 };
 
 var isDriver = false;
+var roomName;
 var robotIPaddress;
 
 function start() {
@@ -21,9 +23,11 @@ function start() {
   // check if "&displayName=xxx" is appended to URL, otherwise alert user to populate
   var urlParams = new URLSearchParams(window.location.search);
   localDisplayName = urlParams.get('displayName') || prompt('Enter your name', '');
-  if (confirm('If you are the host and will be connecting to the robot, please click OK. Otherwise, click CANCEL.')) {
+  if (confirm('If you are the host, please click OK. Otherwise, click CANCEL.')) {
+    roomName = prompt('Please enter a room name', '');
     robotIPaddress = prompt('Please enter your robot IP address as shown on the Driver Station', '');
   } else {
+    roomName = prompt('Please enter the room name you want to join', '');
     localDisplayName = "Driver: ".concat(localDisplayName);
     console.log(localDisplayName);
     isDriver = true;
@@ -64,7 +68,7 @@ function start() {
 
       // set up websocket and message all existing clients
       .then(() => {
-        serverConnection = new WebSocket('wss://' + window.location.hostname + ':' + WS_PORT);
+        serverConnection = new WebSocket('wss://' + WS_ADDR + ':' + WS_PORT);
         serverConnection.onmessage = gotMessageFromServer;
         serverConnection.onopen = event => {
           serverConnection.send(JSON.stringify({ 'displayName': localDisplayName, 'uuid': localUuid, 'dest': 'all' }));
@@ -166,7 +170,7 @@ function gotMessageFromServer(message) {
   var peerUuid = signal.uuid;
 
   // Ignore messages that are not for us or from ourselves
-  if (peerUuid == localUuid || (signal.dest != localUuid && signal.dest != 'all')) return;
+  if (peerUuid == localUuid || (signal.dest != localUuid && signal.dest != 'all') || (!peerUuid.includes(roomName))) return;
 
   if (signal.displayName && signal.dest == 'all') {
     // set up peer connection object for a newcomer peer
@@ -230,31 +234,32 @@ function gotRemoteStream(event, peerUuid) {
 
 
   if (isDriver) {
-    if (peerUuid.includes("host-")) {
-      console.log("VALID HOST USER");
-      var vidElement = document.createElement('video');
-      vidElement.setAttribute('autoplay', '');
-      vidElement.setAttribute('muted', '');
-      vidElement.srcObject = event.streams[0];
-
-      var vidContainer = document.createElement('div');
-      vidContainer.setAttribute('id', 'remoteVideo_' + peerUuid);
-      vidContainer.setAttribute('class', 'videoContainer');
-      vidContainer.appendChild(vidElement);
-
-      vidContainer.appendChild(makeLabel(peerConnections[peerUuid].displayName));
-      document.getElementById('videos').appendChild(vidContainer);
-    }
-  } else {
+    // if (peerUuid.includes("host-")) {
+    console.log("VALID HOST USER");
     var vidElement = document.createElement('video');
     vidElement.setAttribute('autoplay', '');
-    vidElement.setAttribute('muted', '');
+    // vidElement.setAttribute('muted', '');
     vidElement.srcObject = event.streams[0];
 
     var vidContainer = document.createElement('div');
     vidContainer.setAttribute('id', 'remoteVideo_' + peerUuid);
     vidContainer.setAttribute('class', 'videoContainer');
     vidContainer.appendChild(vidElement);
+
+    vidContainer.appendChild(makeLabel(peerConnections[peerUuid].displayName));
+    document.getElementById('videos').appendChild(vidContainer);
+    // }
+  } else {
+    var vidElement = document.createElement('video');
+    vidElement.setAttribute('autoplay', '');
+    // vidElement.setAttribute('muted', '');
+    vidElement.srcObject = event.streams[0];
+
+    var vidContainer = document.createElement('div');
+    vidContainer.setAttribute('id', 'remoteVideo_' + peerUuid);
+    vidContainer.setAttribute('class', 'videoContainer');
+    vidContainer.appendChild(vidElement);
+
     vidContainer.appendChild(makeLabel(peerConnections[peerUuid].displayName));
     document.getElementById('videos').appendChild(vidContainer);
   }
@@ -277,7 +282,7 @@ function checkPeerDisconnect(event, peerUuid) {
     document.getElementById('videos').removeChild(document.getElementById('remoteVideo_' + peerUuid));
     updateLayout();
   } else {
-    console.log("OKAY")
+    console.log("OKAY");
   }
 }
 
@@ -291,7 +296,7 @@ function updateLayout() {
   if (!isDriver) {
     numVideos++;
   } else {
-    numVideos = 1;
+    // numVideos = 1;
   }
 
   console.log(numVideos);
@@ -327,7 +332,7 @@ function createUUID(isDriver) {
   }
 
   if (isDriver) {
-    return s4() + s4() + '-' + s4() + '-' + s4() + '-' + s4() + '-' + s4() + s4() + s4();
+    return roomName + '-' + s4() + s4() + '-' + s4() + '-' + s4() + '-' + s4() + '-' + s4() + s4() + s4();
   }
-  return 'host-' + s4() + s4() + '-' + s4() + '-' + s4() + '-' + s4() + '-' + s4() + s4() + s4();
+  return 'host-' + roomName + '-' + s4() + s4() + '-' + s4() + '-' + s4() + '-' + s4() + '-' + s4() + s4() + s4();
 }
