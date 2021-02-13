@@ -1,10 +1,12 @@
 const WS_PORT = 11039; //make sure this matches the port for the webscokets server
+const LH_WS_PORT = 9301; //make sure this matches the port for the webscokets server
 const WS_ADDR = '192.168.1.30'; //make sure this matches the port for the webscokets server
 
 var localUuid;
 var localDisplayName;
 var localStream;
 var serverConnection;
+var localHostConnection;
 var peerConnections = {}; // key is uuid, values are peer connection object and user defined display name string
 
 var peerConnectionConfig = {
@@ -62,6 +64,12 @@ function start() {
       .then(stream => {
         localStream = stream;
         if (!isDriver) {
+          localHostConnection = new WebSocket('wss://localhost:' + LH_WS_PORT);
+          localHostConnection.onopen = event => {
+            if (!isDriver && robotIPaddress != null) {
+              localHostConnection.send("IP: " + robotIPaddress);
+            }
+          }
           document.getElementById('localVideo').srcObject = stream;
         }
       }).catch(errorHandler)
