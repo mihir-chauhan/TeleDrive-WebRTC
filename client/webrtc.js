@@ -1,6 +1,6 @@
 const WS_PORT = 11039; //make sure this matches the port for the webscokets server
 const LH_WS_PORT = 9301; //make sure this matches the port for the webscokets server
-const WS_ADDR = '192.168.1.30'; //make sure this matches the port for the webscokets server
+const WS_ADDR = 'localhost'; //make sure this matches the port for the webscokets server
 
 var localUuid;
 var localDisplayName;
@@ -9,6 +9,8 @@ var serverConnection;
 var localHostConnection;
 var peerConnections = {}; // key is uuid, values are peer connection object and user defined display name string
 
+var remoteConnection = null;  // RTCPeerConnection for the "remote"
+var sendChannel = null;       // RTCDataChannel for the local (sender)
 var peerConnectionConfig = {
   'iceServers': [
     { 'urls': 'stun:stun.stunprotocol.org:3942' },
@@ -209,6 +211,21 @@ function setUpPeer(peerUuid, displayName, initCall = false) {
   peerConnections[peerUuid].pc.oniceconnectionstatechange = event => checkPeerDisconnect(event, peerUuid);
   peerConnections[peerUuid].pc.addStream(localStream);
 
+  if (peerUuid.includes("host-")) {
+    console.log("connecting to host as driver");
+    sendChannel = peerConnections[peerUuid].pc.createDataChannel("gamepad");
+    sendChannel.onopen = e => sendChannel.send("hello");
+    sendChannel.onmessage = e => console.log("Message: " + e.data);
+  }
+  if (!isDriver) {
+    console.log("connecting to driver as host");
+    remoteConnection = new RTCPeerConnection();
+    remoteConnection.ondatachannel = e => {
+      remoteConnection.dc = e.channel;
+      remoteConnection.dc.onmessage = e => console.log("message: " + e.data);
+      remoteConnection.dc.onopen = e => console.log("connection opened");
+    }
+  }
   if (initCall) {
     peerConnections[peerUuid].pc.createOffer({ offerToReceiveVideo: true }).then(description => createdDescription(description, peerUuid)).catch(errorHandler);
   }
