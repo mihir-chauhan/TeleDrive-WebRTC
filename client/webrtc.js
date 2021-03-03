@@ -279,6 +279,7 @@ function startGamepadHandlerAndSocketThread() {
 var localConnection;
 var datachannel;
 var remoteConnection;
+var remoteConnection2;
 
 function openGamepadDataChannel() {
   localConnection = new RTCPeerConnection();
@@ -291,6 +292,7 @@ function openGamepadDataChannel() {
 
 var hasSentLocalSDP = false;
 var hasSentRemoteSDP = false;
+var hasSentRemoteSDP2 = false;
 
 function sendLocalSDP() {
   if (!hasSentLocalSDP) {
@@ -306,16 +308,25 @@ function sendRemoteSDP(peerUuid) {
   }
 }
 
+function sendRemoteSDP2(peerUuid) {
+  if (!hasSentRemoteSDP2) {
+    serverConnection.send(JSON.stringify({ 'gamepadSDP': remoteConnection2.localDescription, 'uuid': localUuid, 'dest': peerUuid }));
+    hasSentRemoteSDP2 = true;
+  }
+}
+
 function handleGamepadMessageFromDriver(message) {
   console.log("Gamepad Input: " + message);
   localHostConnection.send(message);
 }
 
+var hasSetupDriver1GamepadChannel = false;
+
 async function gotMessageFromServer(message) {
   var signal = JSON.parse(message.data);
   var peerUuid = signal.uuid;
 
-  if (signal.dest === 'host' && !isDriver) {
+  if (signal.dest === 'host' && !isDriver && !hasSetupDriver1GamepadChannel) {
     const offer = signal.sdp;
     remoteConnection = new RTCPeerConnection();
     remoteConnection.onicecandidate = e => sendRemoteSDP(peerUuid);
@@ -326,6 +337,18 @@ async function gotMessageFromServer(message) {
     }
     remoteConnection.setRemoteDescription(offer).then(a => console.log("Successfully setup SDP offer to remote description"));
     remoteConnection.createAnswer().then(a => remoteConnection.setLocalDescription(a)).then(a => console.log(JSON.stringify(remoteConnection.localDescription)));
+    hasSetupDriver1GamepadChannel = true;
+  } else if (signal.dest === 'host' && !isDriver && hasSetupDriver1GamepadChannel) {
+    const offer = signal.sdp;
+    remoteConnection2 = new RTCPeerConnection();
+    remoteConnection2.onicecandidate = e => sendRemoteSDP2(peerUuid);
+    remoteConnection2.ondatachannel = e => {
+      remoteConnection2.dc = e.channel;
+      remoteConnection2.dc.onmessage = e => handleGamepadMessageFromDriver(e.data);
+      remoteConnection2.dc.onopen = e => console.log("Opened Gamepad Channel Successfully");
+    }
+    remoteConnection2.setRemoteDescription(offer).then(a => console.log("Successfully setup SDP offer to remote description"));
+    remoteConnection2.createAnswer().then(a => remoteConnection2.setLocalDescription(a)).then(a => console.log(JSON.stringify(remoteConnection2.localDescription)));
 
   } else if (signal.dest == localUuid && isDriver && signal.gamepadSDP) {
     const answer = signal.gamepadSDP;
