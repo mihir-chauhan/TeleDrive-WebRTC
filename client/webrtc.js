@@ -27,7 +27,12 @@ function start() {
   localDisplayName = urlParams.get('displayName') || prompt('Enter your name', '');
   if (confirm('If you are the host, please click OK. Otherwise, click CANCEL.')) {
     roomName = prompt('Please enter a room name', '');
-    robotIPaddress = prompt('Please enter your robot IP address as shown on the Driver Station', '');
+    while (!ValidateIPaddress(robotIPaddress)) {
+      robotIPaddress = prompt('Please enter your robot IP address as shown on the Driver Station', '');
+      if (!ValidateIPaddress(robotIPaddress)) {
+        alert('Invalid IP Address. Please try again.');
+      }
+    }
   } else {
     roomName = prompt('Please enter the room name you want to join', '');
     localDisplayName = "Driver: ".concat(localDisplayName);
@@ -86,6 +91,13 @@ function start() {
   } else {
     alert('Your browser does not support getUserMedia API');
   }
+}
+
+function ValidateIPaddress(ipaddress) {
+  if (/^(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/.test(ipaddress)) {
+    return (true)
+  }
+  return (false)
 }
 
 
