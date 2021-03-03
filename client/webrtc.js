@@ -95,14 +95,32 @@ function start() {
   }
 }
 
+
+var A = false;
+var B = false;
+var X = false;
+var Y = false;
+var LB = false;
+var RB = false;
+var LT = false;
+var RT = false;
+var BACK = false;
+var START = false;
+var DU = false;
+var DD = false;
+var DL = false;
+var DR = false;
+
+var userNumber = 0;
+
 function startGamepadHandlerAndSocketThread() {
 
   var haveEvents = 'GamepadEvent' in window;
   var haveWebkitEvents = 'WebKitGamepadEvent' in window;
   var controllers = {};
   var rAF = window.mozRequestAnimationFrame ||
-    window.webkitRequestAnimationFrame ||
-    window.requestAnimationFrame;
+    window.requestAnimationFrame ||
+    window.webkitRequestAnimationFrame;
 
   function connecthandler(e) {
     addgamepad(e.gamepad);
@@ -127,20 +145,81 @@ function startGamepadHandlerAndSocketThread() {
 
       for (var i = 0; i < controller.buttons.length; i++) { //a, b, x, y, left_bumper, right_bumper, left_trigger, right_trigger, back, start, ..., 12 - dpad_up, 13 - dpad_down, 14 - dpad_left, 15 - dpad_right
         var val = controller.buttons[i];
-        var pressed = val == 1.0;
-        var touched = false;
+        var pressed = (controller.buttons[i] == 1.0);
         if (typeof (val) == "object") {
           pressed = val.pressed;
-          if ('touched' in val) {
-            touched = val.touched;
-          }
           val = val.value;
         }
-        if (pressed) {
-          console.log("SOMETHING WAS PRESSED");
-        }
-        if (touched) {
-          console.log("SOMETHING WAS TOUCHED");
+        if (i == 0) {
+          if (A != pressed) {
+            A = pressed;
+            datachannel.send("G" + userNumber + "_A_" + (A ? "P" : "R"));
+          }
+        } else if (i == 1) {
+          if (B != pressed) {
+            B = pressed;
+            datachannel.send("G" + userNumber + "_B_" + (B ? "P" : "R"));
+          }
+        } else if (i == 2) {
+          if (X != pressed) {
+            X = pressed;
+            datachannel.send("G" + userNumber + "_X_" + (X ? "P" : "R"));
+          }
+        } else if (i == 3) {
+          if (Y != pressed) {
+            Y = pressed;
+            datachannel.send("G" + userNumber + "_Y_" + (Y ? "P" : "R"));
+          }
+        } else if (i == 4) {
+          if (LB != pressed) {
+            LB = pressed;
+            datachannel.send("G" + userNumber + "_LB_" + (LB ? "P" : "R"));
+          }
+        } else if (i == 5) {
+          if (RB != pressed) {
+            RB = pressed;
+            datachannel.send("G" + userNumber + "_RB_" + (RB ? "P" : "R"));
+          }
+        } else if (i == 6) {
+          if (LT != pressed) {
+            LT = pressed;
+            datachannel.send("G" + userNumber + "_LT_" + (LT ? "P" : "R"));
+          }
+        } else if (i == 7) {
+          if (RT != pressed) {
+            RT = pressed;
+            datachannel.send("G" + userNumber + "_RT_" + (RT ? "P" : "R"));
+          }
+        } else if (i == 8) {
+          if (BACK != pressed) {
+            BACK = pressed;
+            datachannel.send("G" + userNumber + "_BACK_" + (BACK ? "P" : "R"));
+          }
+        } else if (i == 9) {
+          if (START != pressed) {
+            START = pressed;
+            datachannel.send("G" + userNumber + "_START_" + (START ? "P" : "R"));
+          }
+        } else if (i == 12) {
+          if (DU != pressed) {
+            DU = pressed;
+            datachannel.send("G" + userNumber + "_DU_" + (DU ? "P" : "R"));
+          }
+        } else if (i == 13) {
+          if (DD != pressed) {
+            DD = pressed;
+            datachannel.send("G" + userNumber + "_DD_" + (DD ? "P" : "R"));
+          }
+        } else if (i == 14) {
+          if (DL != pressed) {
+            DL = pressed;
+            datachannel.send("G" + userNumber + "_DL_" + (DL ? "P" : "R"));
+          }
+        } else if (i == 15) {
+          if (DR != pressed) {
+            DR = pressed;
+            datachannel.send("G" + userNumber + "_DR_" + (DR ? "P" : "R"));
+          }
         }
       }
 
@@ -179,14 +258,15 @@ var remoteConnection;
 
 function openGamepadDataChannel() {
   localConnection = new RTCPeerConnection();
-  datachannel = localConnection.createDataChannel("gamepad");
+  datachannel = localConnection.createDataChannel(localUuid + "-gamepad");
   datachannel.onmessage = e => console.log("Message: " + e.data);
-  datachannel.onopen = e => console.log("Open");
+  datachannel.onopen = e => startGamepadHandlerAndSocketThread();
   localConnection.onicecandidate = e => serverConnection.send(JSON.stringify({ 'sdp': localConnection.localDescription, 'uuid': localUuid, 'dest': 'host' }));
   localConnection.createOffer().then(o => localConnection.setLocalDescription(o)).then(a => console.log("Set successfully"));
 }
 
 function handleGamepadMessageFromDriver(message) {
+  console.log("message: " + message);
   localHostConnection.send(message);
 }
 
@@ -208,7 +288,6 @@ async function gotMessageFromServer(message) {
     remoteConnection.createAnswer().then(a => remoteConnection.setLocalDescription(a)).then(a => console.log(JSON.stringify(remoteConnection.localDescription)));
 
   } else if (signal.dest == localUuid && isDriver && signal.gamepadSDP) {
-    console.log("hi");
     const answer = signal.gamepadSDP;
     localConnection.setRemoteDescription(answer).then(a => console.log("done"))
   }
