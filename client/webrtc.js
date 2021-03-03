@@ -111,6 +111,11 @@ var DD = false;
 var DL = false;
 var DR = false;
 
+var LX = 0.0;
+var LY = 0.0;
+var RX = 0.0;
+var RY = 0.0;
+
 var userNumber = 0;
 
 function startGamepadHandlerAndSocketThread() {
@@ -224,7 +229,27 @@ function startGamepadHandlerAndSocketThread() {
       }
 
       for (var i = 0; i < controller.axes.length; i++) { // leftX, leftY, rightX, rightY
-
+        if (i == 0) {
+          if (LX != controller.axes[i]) {
+            LX = controller.axes[i];
+            datachannel.send("G" + userNumber + "_LX_" + (LX));
+          }
+        } else if (i == 1) {
+          if (LY != controller.axes[i]) {
+            LY = controller.axes[i];
+            datachannel.send("G" + userNumber + "_LY_" + (LY));
+          }
+        } else if (i == 2) {
+          if (RX != controller.axes[i]) {
+            RX = controller.axes[i];
+            datachannel.send("G" + userNumber + "_RX_" + (RX));
+          }
+        } else if (i == 3) {
+          if (RY != controller.axes[i]) {
+            RY = controller.axes[i];
+            datachannel.send("G" + userNumber + "_RY_" + (RY));
+          }
+        }
       }
     }
     rAF(updateStatus);
