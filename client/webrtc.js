@@ -221,6 +221,12 @@ function startGamepadHandlerAndSocketThread() {
         }
       }
 
+      if (START && A) {
+        userNumber = 1;
+      } else if (START && B) {
+        userNumber = 2;
+      }
+
       for (var i = 0; i < controller.axes.length; i++) { // leftX, leftY, rightX, rightY
         if (i == 0) {
           if (LX != controller.axes[i]) {
@@ -279,24 +285,24 @@ function openGamepadDataChannel() {
   datachannel = localConnection.createDataChannel(localUuid + "-gamepad");
   datachannel.onmessage = e => console.log("Message: " + e.data);
   datachannel.onopen = e => startGamepadHandlerAndSocketThread();
-  localConnection.onicecandidate = e => decideToSendLOCALOriginalSDP();
+  localConnection.onicecandidate = e => sendLocalSDP();
   localConnection.createOffer().then(o => localConnection.setLocalDescription(o)).then(a => console.log("Created Gamepad Channel Offer Description Successfully"));
 }
 
-var counter = 0;
-var counterTwo = 0;
+var hasSentLocalSDP = false;
+var hasSentRemoteSDP = false;
 
-function decideToSendLOCALOriginalSDP() {
-  if (counter == 0) {
+function sendLocalSDP() {
+  if (!hasSentLocalSDP) {
     serverConnection.send(JSON.stringify({ 'sdp': localConnection.localDescription, 'uuid': localUuid, 'dest': 'host' }));
-    counter++;
+    hasSentLocalSDP = true;
   }
 }
 
-function decideToSendREMOTEOriginalSDP(peerUuid) {
-  if (counterTwo == 0) {
+function sendRemoteSDP(peerUuid) {
+  if (!hasSentRemoteSDP) {
     serverConnection.send(JSON.stringify({ 'gamepadSDP': remoteConnection.localDescription, 'uuid': localUuid, 'dest': peerUuid }));
-    counterTwo++;
+    hasSentRemoteSDP = true;
   }
 }
 
@@ -310,21 +316,20 @@ async function gotMessageFromServer(message) {
   var peerUuid = signal.uuid;
 
   if (signal.dest === 'host' && !isDriver) {
-    console.log("peerUUID: " + peerUuid);
     const offer = signal.sdp;
     remoteConnection = new RTCPeerConnection();
-    remoteConnection.onicecandidate = e => decideToSendREMOTEOriginalSDP(peerUuid);
+    remoteConnection.onicecandidate = e => sendRemoteSDP(peerUuid);
     remoteConnection.ondatachannel = e => {
       remoteConnection.dc = e.channel;
       remoteConnection.dc.onmessage = e => handleGamepadMessageFromDriver(e.data);
-      remoteConnection.dc.onopen = e => console.log("open!");
+      remoteConnection.dc.onopen = e => console.log("Opened Gamepad Channel Successfully");
     }
-    remoteConnection.setRemoteDescription(offer).then(a => console.log("done"));
+    remoteConnection.setRemoteDescription(offer).then(a => console.log("Successfully setup SDP offer to remote description"));
     remoteConnection.createAnswer().then(a => remoteConnection.setLocalDescription(a)).then(a => console.log(JSON.stringify(remoteConnection.localDescription)));
 
   } else if (signal.dest == localUuid && isDriver && signal.gamepadSDP) {
     const answer = signal.gamepadSDP;
-    localConnection.setRemoteDescription(answer).then(a => console.log("done"))
+    localConnection.setRemoteDescription(answer).then(a => console.log("Successfully answered host's offer for gamepad channel"))
   }
 
   // Ignore messages that are not for us or from ourselves
@@ -374,7 +379,7 @@ function gotIceCandidate(event, peerUuid) {
 }
 
 function createdDescription(description, peerUuid) {
-  console.log(`got description, peer ${peerUuid}`);
+  console.log(`Received description for ${peerUuid}`);
   peerConnections[peerUuid].pc.setLocalDescription(description).then(function () {
     serverConnection.send(JSON.stringify({ 'sdp': peerConnections[peerUuid].pc.localDescription, 'uuid': localUuid, 'dest': peerUuid }));
   }).catch(errorHandler);
@@ -383,7 +388,7 @@ function createdDescription(description, peerUuid) {
 var previousPeerUUIDs = [];
 
 function gotRemoteStream(event, peerUuid) {
-  console.log(`got remote stream, peer ${peerUuid}`);
+  console.log(`Succesfully receieved stream of peer: "${peerUuid}"`);
   for (i = 0; i < previousPeerUUIDs.length; i++) {
     if (previousPeerUUIDs[i] == peerUuid) {
       return;
@@ -396,7 +401,6 @@ function gotRemoteStream(event, peerUuid) {
 
   if (isDriver) {
     // if (peerUuid.includes("host-")) {
-    console.log("VALID HOST USER");
     var vidElement = document.createElement('video');
     vidElement.setAttribute('autoplay', '');
     // vidElement.setAttribute('muted', '');
@@ -431,7 +435,7 @@ function gotRemoteStream(event, peerUuid) {
 
 function checkPeerDisconnect(event, peerUuid) {
   var state = peerConnections[peerUuid].pc.iceConnectionState;
-  console.log(`connection with peer ${peerUuid} ${state}`);
+  console.log(`Connection with peer ${peerUuid}: ${state}`);
   if (state === "failed" || state === "closed" || state === "disconnected") {
     delete peerConnections[peerUuid];
     for (i = 0; i < previousPeerUUIDs.length; i++) {
@@ -443,7 +447,7 @@ function checkPeerDisconnect(event, peerUuid) {
     document.getElementById('videos').removeChild(document.getElementById('remoteVideo_' + peerUuid));
     updateLayout();
   } else {
-    console.log("OKAY");
+    console.log("Connection with peer is stable");
   }
 }
 
@@ -459,8 +463,6 @@ function updateLayout() {
   } else {
     // numVideos = 1;
   }
-
-  console.log(numVideos);
 
   if (numVideos > 1 && numVideos <= 4) { // 2x2 grid
     rowHeight = '48vh';
@@ -482,7 +484,7 @@ function makeLabel(label) {
 }
 
 function errorHandler(error) {
-  console.log(error);
+  console.log("Error occurred: " + error);
 }
 
 // Taken from http://stackoverflow.com/a/105074/515584
