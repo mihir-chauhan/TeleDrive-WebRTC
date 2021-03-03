@@ -1,6 +1,6 @@
 const WS_PORT = 11039; //make sure this matches the port for the webscokets server
 const LH_WS_PORT = 9301; //make sure this matches the port for the webscokets server
-const WS_ADDR = 'localhost'; //make sure this matches the port for the webscokets server
+const WS_ADDR = '192.168.1.30'; //make sure this matches the port for the webscokets server
 
 var localUuid;
 var localDisplayName;
@@ -9,8 +9,6 @@ var serverConnection;
 var localHostConnection;
 var peerConnections = {}; // key is uuid, values are peer connection object and user defined display name string
 
-var remoteConnection = null;  // RTCPeerConnection for the "remote"
-var sendChannel = null;       // RTCDataChannel for the local (sender)
 var peerConnectionConfig = {
   'iceServers': [
     { 'urls': 'stun:stun.stunprotocol.org:3942' },
@@ -175,9 +173,45 @@ function startGamepadHandlerAndSocketThread() {
 
 }
 
-function gotMessageFromServer(message) {
+var localConnection;
+var datachannel;
+var remoteConnection;
+
+function openGamepadDataChannel() {
+  localConnection = new RTCPeerConnection();
+  datachannel = localConnection.createDataChannel("gamepad");
+  datachannel.onmessage = e => console.log("Message: " + e.data);
+  datachannel.onopen = e => console.log("Open");
+  localConnection.onicecandidate = e => serverConnection.send(JSON.stringify({ 'sdp': localConnection.localDescription, 'uuid': localUuid, 'dest': 'host' }));
+  localConnection.createOffer().then(o => localConnection.setLocalDescription(o)).then(a => console.log("Set successfully"));
+}
+
+function handleGamepadMessageFromDriver(message) {
+  localHostConnection.send(message);
+}
+
+async function gotMessageFromServer(message) {
   var signal = JSON.parse(message.data);
   var peerUuid = signal.uuid;
+
+  if (signal.dest === 'host' && !isDriver) {
+    console.log("peerUUID: " + peerUuid);
+    const offer = signal.sdp;
+    remoteConnection = new RTCPeerConnection();
+    remoteConnection.onicecandidate = e => serverConnection.send(JSON.stringify({ 'gamepadSDP': remoteConnection.localDescription, 'uuid': localUuid, 'dest': peerUuid }));
+    remoteConnection.ondatachannel = e => {
+      remoteConnection.dc = e.channel;
+      remoteConnection.dc.onmessage = e => handleGamepadMessageFromDriver(e.data);
+      remoteConnection.dc.onopen = e => console.log("open!");
+    }
+    remoteConnection.setRemoteDescription(offer).then(a => console.log("done"));
+    remoteConnection.createAnswer().then(a => remoteConnection.setLocalDescription(a)).then(a => console.log(JSON.stringify(remoteConnection.localDescription)));
+
+  } else if (signal.dest == localUuid && isDriver && signal.gamepadSDP) {
+    console.log("hi");
+    const answer = signal.gamepadSDP;
+    localConnection.setRemoteDescription(answer).then(a => console.log("done"))
+  }
 
   // Ignore messages that are not for us or from ourselves
   if (peerUuid == localUuid || (signal.dest != localUuid && signal.dest != 'all') || (!peerUuid.includes(roomName))) return;
@@ -212,19 +246,7 @@ function setUpPeer(peerUuid, displayName, initCall = false) {
   peerConnections[peerUuid].pc.addStream(localStream);
 
   if (peerUuid.includes("host-")) {
-    console.log("connecting to host as driver");
-    sendChannel = peerConnections[peerUuid].pc.createDataChannel("gamepad");
-    sendChannel.onopen = e => sendChannel.send("hello");
-    sendChannel.onmessage = e => console.log("Message: " + e.data);
-  }
-  if (!isDriver) {
-    console.log("connecting to driver as host");
-    remoteConnection = new RTCPeerConnection();
-    remoteConnection.ondatachannel = e => {
-      remoteConnection.dc = e.channel;
-      remoteConnection.dc.onmessage = e => console.log("message: " + e.data);
-      remoteConnection.dc.onopen = e => console.log("connection opened");
-    }
+    openGamepadDataChannel();
   }
   if (initCall) {
     peerConnections[peerUuid].pc.createOffer({ offerToReceiveVideo: true }).then(description => createdDescription(description, peerUuid)).catch(errorHandler);
