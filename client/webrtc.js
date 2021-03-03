@@ -31,7 +31,6 @@ function start() {
   } else {
     roomName = prompt('Please enter the room name you want to join', '');
     localDisplayName = "Driver: ".concat(localDisplayName);
-    console.log(localDisplayName);
     isDriver = true;
     document.getElementById('localVideoContainer').style.display = "none";
   }
@@ -54,8 +53,6 @@ function start() {
       audio: true,
     };
   }
-
-  console.log(constraints);
 
   // set up local video stream
   if (navigator.mediaDevices.getUserMedia) {
@@ -81,11 +78,7 @@ function start() {
         serverConnection.onopen = event => {
           serverConnection.send(JSON.stringify({ 'displayName': localDisplayName, 'uuid': localUuid, 'dest': 'all' }));
           if (!isDriver && robotIPaddress != null) {
-            console.log("ip:  " + robotIPaddress);
             serverConnection.send("IP: " + robotIPaddress);
-          }
-          if (isDriver) {
-            startGamepadHandlerAndSocketThread();
           }
         }
       }).catch(errorHandler);
@@ -286,12 +279,29 @@ function openGamepadDataChannel() {
   datachannel = localConnection.createDataChannel(localUuid + "-gamepad");
   datachannel.onmessage = e => console.log("Message: " + e.data);
   datachannel.onopen = e => startGamepadHandlerAndSocketThread();
-  localConnection.onicecandidate = e => serverConnection.send(JSON.stringify({ 'sdp': localConnection.localDescription, 'uuid': localUuid, 'dest': 'host' }));
-  localConnection.createOffer().then(o => localConnection.setLocalDescription(o)).then(a => console.log("Set successfully"));
+  localConnection.onicecandidate = e => decideToSendLOCALOriginalSDP();
+  localConnection.createOffer().then(o => localConnection.setLocalDescription(o)).then(a => console.log("Created Gamepad Channel Offer Description Successfully"));
+}
+
+var counter = 0;
+var counterTwo = 0;
+
+function decideToSendLOCALOriginalSDP() {
+  if (counter == 0) {
+    serverConnection.send(JSON.stringify({ 'sdp': localConnection.localDescription, 'uuid': localUuid, 'dest': 'host' }));
+    counter++;
+  }
+}
+
+function decideToSendREMOTEOriginalSDP(peerUuid) {
+  if (counterTwo == 0) {
+    serverConnection.send(JSON.stringify({ 'gamepadSDP': remoteConnection.localDescription, 'uuid': localUuid, 'dest': peerUuid }));
+    counterTwo++;
+  }
 }
 
 function handleGamepadMessageFromDriver(message) {
-  console.log("message: " + message);
+  console.log("Gamepad Input: " + message);
   localHostConnection.send(message);
 }
 
@@ -303,7 +313,7 @@ async function gotMessageFromServer(message) {
     console.log("peerUUID: " + peerUuid);
     const offer = signal.sdp;
     remoteConnection = new RTCPeerConnection();
-    remoteConnection.onicecandidate = e => serverConnection.send(JSON.stringify({ 'gamepadSDP': remoteConnection.localDescription, 'uuid': localUuid, 'dest': peerUuid }));
+    remoteConnection.onicecandidate = e => decideToSendREMOTEOriginalSDP(peerUuid);
     remoteConnection.ondatachannel = e => {
       remoteConnection.dc = e.channel;
       remoteConnection.dc.onmessage = e => handleGamepadMessageFromDriver(e.data);
