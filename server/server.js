@@ -1,11 +1,7 @@
-const HTTPS_PORT = 11039; //default port for https is 443
-const HTTP_PORT = 8001; //default port for http is 80
-
+const HTTPS_PORT = 80; //default port for https is 443
 const fs = require('fs');
 const http = require('http');
-// const https = require('https');
 const WebSocket = require('ws');
-var dgram = require("dgram");
 
 // based on examples at https://www.npmjs.com/package/ws 
 const WebSocketServer = WebSocket.Server;
