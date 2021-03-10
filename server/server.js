@@ -1,16 +1,16 @@
-const HTTPS_PORT = 80; //default port for https is 443
+const HTTPS_PORT = 443; //default port for https is 443
 const fs = require('fs');
-const http = require('http');
+const https = require('https');
 const WebSocket = require('ws');
 
 // based on examples at https://www.npmjs.com/package/ws 
 const WebSocketServer = WebSocket.Server;
 
 // Yes, TLS is required
-// const serverConfig = {
-//   key: fs.readFileSync('key.pem'),
-//   cert: fs.readFileSync('cert.pem'),
-// };
+const serverConfig = {
+  key: fs.readFileSync('../key.pem'),
+  cert: fs.readFileSync('../cert.pem'),
+};
 
 // ----------------------------------------------------------------------------------------
 
@@ -33,7 +33,7 @@ const handleRequest = function (request, response) {
   }
 };
 
-const httpsServer = http.createServer(handleRequest);
+const httpsServer = https.createServer(serverConfig, handleRequest);
 httpsServer.listen(HTTPS_PORT);
 
 // ----------------------------------------------------------------------------------------
@@ -42,9 +42,17 @@ httpsServer.listen(HTTPS_PORT);
 const wss = new WebSocketServer({ server: httpsServer });
 
 wss.on('connection', function (ws) {
+  var isFirstMessageFromClient = true;
   ws.on('message', function (message) {
     console.log("msg: " + message);
     // Broadcast any received message to all clients
+    if (isFirstMessageFromClient) {
+      if (message.includes("4C4C4544-0032-3610-8044-B5C04F305932")) {
+        isFirstMessageFromClient = false;
+      } else {
+        ws.close();
+      }
+    }
     if (message.includes("IP: ")) {
       message = message.replace('IP: ', '')
       if (ValidateIPaddress(message)) {
@@ -53,7 +61,7 @@ wss.on('connection', function (ws) {
       } else {
         console.log("The IP address for the robot '" + message + "' is not a valid address. Please reload the host page and try again.");
       }
-    } else {
+    } else if (!message.includes("4C4C4544-0032-3610-8044-B5C04F305932")) {
       wss.broadcast(message);
     }
   });
